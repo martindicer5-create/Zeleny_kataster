@@ -110,16 +110,17 @@ def load_geojson():
     df = pd.read_csv("prienik_kn_lpis.csv")
     df["symbol"] = pd.to_numeric(df["symbol"], errors="coerce")
     df["kn_druh"] = df["symbol"].map(SYMBOL_MAP).fillna("Iné")
+    df["cpa"] = df["cpa"].apply(lambda x: f"{float(x):.3f}" if pd.notna(x) else "")
     # One KN druh per CPA (take first — symbol is same for all rows of same parcel)
-    kn_lookup = df.groupby("cpa")["kn_druh"].first().to_dict()
+    kn_lookup  = df.groupby("cpa")["kn_druh"].first().to_dict()
     sym_lookup = df.groupby("cpa")["symbol"].first().to_dict()
 
     for feat in gj["features"]:
-        cpa = feat["properties"].get("CPA", "")
+        cpa = str(feat["properties"].get("CPA", "")).strip()
         kultura = (feat["properties"].get("KULTURA_NA") or "").lower()
         kn_druh = kn_lookup.get(cpa, "Neznámy")
         symbol  = sym_lookup.get(cpa)
-        zhoda   = (int(symbol), kultura) in ZHODY if symbol and not pd.isna(symbol) else True
+        zhoda   = (int(symbol), kultura) in ZHODY if (symbol is not None and not pd.isna(symbol)) else True
         feat["properties"]["kn_druh"]      = kn_druh
         feat["properties"]["lpis_kultura"] = feat["properties"].get("KULTURA_NA", "")
         feat["properties"]["zhoda"]        = zhoda
