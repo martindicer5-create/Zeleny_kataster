@@ -110,16 +110,19 @@ def load_geojson():
     df = pd.read_csv("prienik_kn_lpis.csv")
     df["symbol"] = pd.to_numeric(df["symbol"], errors="coerce")
     df["kn_druh"] = df["symbol"].map(SYMBOL_MAP).fillna("Iné")
-    df["zhoda"] = df.apply(
-        lambda r: (int(r["symbol"]), r["kultura_na"].lower()) in ZHODY, axis=1)
-    lookup = df.set_index("cpa")[["kn_druh","kultura_na","zhoda"]].to_dict("index")
+    # One KN druh per CPA (take first — symbol is same for all rows of same parcel)
+    kn_lookup = df.groupby("cpa")["kn_druh"].first().to_dict()
+    sym_lookup = df.groupby("cpa")["symbol"].first().to_dict()
 
     for feat in gj["features"]:
-        cpa = feat["properties"].get("CPA","")
-        info = lookup.get(cpa, {})
-        feat["properties"]["kn_druh"]   = info.get("kn_druh", "Neznámy")
-        feat["properties"]["lpis_kultura"] = info.get("kultura_na", feat["properties"].get("KULTURA_NA",""))
-        feat["properties"]["zhoda"]     = info.get("zhoda", True)
+        cpa = feat["properties"].get("CPA", "")
+        kultura = (feat["properties"].get("KULTURA_NA") or "").lower()
+        kn_druh = kn_lookup.get(cpa, "Neznámy")
+        symbol  = sym_lookup.get(cpa)
+        zhoda   = (int(symbol), kultura) in ZHODY if symbol and not pd.isna(symbol) else True
+        feat["properties"]["kn_druh"]      = kn_druh
+        feat["properties"]["lpis_kultura"] = feat["properties"].get("KULTURA_NA", "")
+        feat["properties"]["zhoda"]        = zhoda
     return gj
 
 @st.cache_data
