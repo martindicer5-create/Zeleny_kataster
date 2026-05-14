@@ -88,7 +88,7 @@ SYMBOL_MAP = {
     45:  "Lesný pozemok",   238:  "Vodná plocha",
     239: "Rybník",          431:  "Zastavané plochy a nádvoria",
     432: "Ostatné plochy",  435:  "Iný druh plochy",
-    479: "Záhrada (iný typ)",
+    479: "Orná pôda",
 }
 
 ZHODY = {
@@ -97,6 +97,7 @@ ZHODY = {
     (42,"záhrada"), (45,"lesný pozemok"),
     (238,"vodná plocha"), (239,"rybník"),
     (431,"zastavané a nádvoria"), (432,"ostatné plochy"),
+    (479,"orná pôda"),
 }
 
 # ── Načítanie dát ──────────────────────────────────────────────────────────
