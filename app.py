@@ -104,7 +104,23 @@ ZHODY = {
 @st.cache_data
 def load_geojson():
     with open("prienik_zuberec.geojson", encoding="utf-8") as f:
-        return json.load(f)
+        gj = json.load(f)
+
+    # Load kn data to enrich GeoJSON with symbol and zhoda
+    df = pd.read_csv("prienik_kn_lpis.csv")
+    df["symbol"] = pd.to_numeric(df["symbol"], errors="coerce")
+    df["kn_druh"] = df["symbol"].map(SYMBOL_MAP).fillna("Iné")
+    df["zhoda"] = df.apply(
+        lambda r: (int(r["symbol"]), r["kultura_na"].lower()) in ZHODY, axis=1)
+    lookup = df.set_index("cpa")[["kn_druh","kultura_na","zhoda"]].to_dict("index")
+
+    for feat in gj["features"]:
+        cpa = feat["properties"].get("CPA","")
+        info = lookup.get(cpa, {})
+        feat["properties"]["kn_druh"]   = info.get("kn_druh", "Neznámy")
+        feat["properties"]["lpis_kultura"] = info.get("kultura_na", feat["properties"].get("KULTURA_NA",""))
+        feat["properties"]["zhoda"]     = info.get("zhoda", True)
+    return gj
 
 @st.cache_data
 def load_kn_lpis():
@@ -154,26 +170,19 @@ def build_map(gj, center=(49.2630, 19.6330)):
     folium.TileLayer("CartoDB Positron", name="Mapa", overlay=False).add_to(m)
 
     def style(f):
-        k = (f["properties"].get("KULTURA_NA") or "").lower()
-        return {"fillColor": KULTURA_FARBA.get(k, "#94a3b8"),
-                "color": "#133220", "weight": 0.5, "fillOpacity": 0.7}
+        zhoda = f["properties"].get("zhoda", True)
+        return {
+            "fillColor": "#22c55e" if zhoda else "#ef4444",
+            "color":     "#14532d" if zhoda else "#7f1d1d",
+            "weight": 0.6, "fillOpacity": 0.7
+        }
 
-    folium.GeoJson(gj, name="Prienik_Zuberec", style_function=style,
+    folium.GeoJson(gj, name="Prienik KN–LPIS", style_function=style,
         tooltip=folium.GeoJsonTooltip(
-            fields=["CPA", "KULTURA_NA", "KOD_DPB", "ha"],
-            aliases=["Parcela KN:", "Kultúra LPIS:", "BPEJ:", "Výmera (ha):"],
+            fields=["CPA", "kn_druh", "lpis_kultura", "ha"],
+            aliases=["Parcela KN:", "KN druh pozemku:", "LPIS kultúra:", "Výmera (ha):"],
         )).add_to(m)
 
-    items = "".join([
-        f'<div><span style="color:{c}">■</span> {k.capitalize()}</div>'
-        for k, c in list(KULTURA_FARBA.items())[:6]])
-    m.get_root().html.add_child(folium.Element(
-        f'<div style="position:fixed;bottom:28px;left:28px;z-index:1000;'
-        f'background:white;padding:10px 14px;border-radius:8px;'
-        f'border:1px solid #ccc;font-family:sans-serif;font-size:12px;'
-        f'box-shadow:0 2px 8px rgba(0,0,0,.15);">'
-        f'<b style="color:#133220">Kultúra LPIS</b><br><br>{items}</div>'
-    ))
     folium.LayerControl().add_to(m)
     return m
 
@@ -230,18 +239,17 @@ tab_mapa, tab_stats, tab_disk, tab_bpej = st.tabs([
 
 # ── TAB: MAPA ──────────────────────────────────────────────────────────────
 with tab_mapa:
-    col_m, col_leg = st.columns([3, 1])
+    col_m, col_leg = st.columns([4, 1])
     with col_m:
         feats = gj.get("features", [])
-        st.caption(f"Zobrazených: **{len(feats):,}** polygónov")
-        st_folium(build_map(gj), width="100%", height=540, returned_objects=[])
+        st.caption(f"Zobrazených: **{len(feats):,}** polygónov · Najazdite kurzorom na plochu pre detail")
+        st_folium(build_map(gj), width="100%", height=560, returned_objects=[])
     with col_leg:
         st.markdown("#### Legenda")
-        for k, c in KULTURA_FARBA.items():
-            st.markdown(f'<span style="color:{c};font-size:1.3rem">■</span> {k.capitalize()}',
-                        unsafe_allow_html=True)
+        st.markdown('<span style="color:#22c55e;font-size:1.5rem">■</span> Zhoda KN–LPIS', unsafe_allow_html=True)
+        st.markdown('<span style="color:#ef4444;font-size:1.5rem">■</span> Nesúlad KN–LPIS', unsafe_allow_html=True)
         st.divider()
-        st.caption("Klikni na polygón pre detail parcely.")
+        st.caption("Klikni na plochu pre detail parcely.")
 
 # ── TAB: ŠTATISTIKY ────────────────────────────────────────────────────────
 with tab_stats:
