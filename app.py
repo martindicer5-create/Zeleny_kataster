@@ -152,7 +152,7 @@ def cpa_display(cpa):
         return main if not sub else f"{main}/{sub}"
     return s
 
-
+def render_table(df, badge_col=None, badge_map=None, max_rows=200):
     rows = ""
     for _, r in df.head(max_rows).iterrows():
         cells = ""
