@@ -85,9 +85,9 @@ SYMBOL_MAP = {
     30:  "Orná pôda",        32:  "Trvalý trávny porast",
     34:  "Ovocný sad",       37:  "Vinica",
     40:  "Chmeľnica",        42:  "Záhrada",
-    45:  "Lesný pozemok",   238:  "Vodná plocha",
-    239: "Rybník",          431:  "Zastavané plochy a nádvoria",
-    432: "Ostatné plochy",  435:  "Iný druh plochy",
+    45:  "Lesný pozemok",   238:  "Vodný tok",
+    239: "Vodná nádrž",     431:  "Dvor, stavebná plocha",
+    432: "Cesta, komunikácia", 435: "Ostatná plocha",
     479: "Orná pôda",
 }
 
