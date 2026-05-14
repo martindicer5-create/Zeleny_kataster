@@ -363,7 +363,7 @@ with tab_disk:
 # ── TAB: BPEJ ──────────────────────────────────────────────────────────────
 with tab_bpej:
     st.subheader("Nevhodné využitie bonitovanej pôdy")
-    st.caption("Parcely s produkčným potenciálom evidované v LPIS ako trvalý trávny porast.")
+    st.caption("LPIS bloky s produkčným potenciálom (BPEJ) evidované ako trvalý trávny porast. Výmera zodpovedá ploche LPIS bloku.")
 
     df_ba = df_mf[
         df_mf["bpej"].notna() &
@@ -382,8 +382,8 @@ with tab_bpej:
              .merge(dominant, on="parcela"))
     df_ba["Výmera (ha)"] = (df_ba["vymera_gis"] / 10000).round(2)
     df_ba["bpej"] = df_ba["bpej"].apply(lambda x: str(int(x)).zfill(7))
-    df_ba = (df_ba.rename(columns={"parcela": "Parcela KN", "bpej": "Kód BPEJ"})
-             [["Parcela KN", "Kód BPEJ", "Výmera (ha)"]]
+    df_ba = (df_ba.rename(columns={"parcela": "LPIS blok", "bpej": "Kód BPEJ"})
+             [["LPIS blok", "Kód BPEJ", "Výmera (ha)"]]
              .sort_values("Výmera (ha)", ascending=False)
              .head(50))
 
@@ -391,7 +391,7 @@ with tab_bpej:
         st.info("Žiadne záznamy pre zvolené kritériá.")
     else:
         k1, k2 = st.columns(2)
-        k1.metric("Dotknutých parciel", len(df_ba))
+        k1.metric("Dotknutých blokov", len(df_ba))
         k2.metric("Celková plocha", f"{df_ba['Výmera (ha)'].sum():.1f} ha")
         st.divider()
         render_table(df_ba)
