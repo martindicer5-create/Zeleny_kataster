@@ -370,9 +370,16 @@ with tab_bpej:
         df_mf["lpis_nazov"].str.lower().str.contains("trvalý trávny porast", na=False) &
         (df_mf["vymera_gis"] > 500)
     ].copy()
-    df_ba = (df_ba.groupby(["parcela", "bpej"])
+    # Keep only the dominant (most frequent) BPEJ per parcel
+    dominant = (df_mf.groupby(["parcela", "bpej"])
+                .size().reset_index(name="cnt")
+                .sort_values("cnt", ascending=False)
+                .groupby("parcela")["bpej"].first()
+                .reset_index())
+    df_ba = (df_ba.groupby("parcela")
              .agg(vymera_gis=("vymera_gis", "max"))
-             .reset_index())
+             .reset_index()
+             .merge(dominant, on="parcela"))
     df_ba["Výmera (ha)"] = (df_ba["vymera_gis"] / 10000).round(2)
     df_ba["bpej"] = df_ba["bpej"].apply(lambda x: str(int(x)).zfill(7))
     df_ba = (df_ba.rename(columns={"parcela": "Parcela KN", "bpej": "Kód BPEJ"})
