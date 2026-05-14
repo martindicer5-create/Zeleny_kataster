@@ -143,7 +143,16 @@ def load_master_final():
     return df[["parcela", "bpej", "vymera_gis", "lpis_nazov"]].dropna(subset=["bpej"])
 
 # ── Helper funkcie ─────────────────────────────────────────────────────────
-def render_table(df, badge_col=None, badge_map=None, max_rows=200):
+def cpa_display(cpa):
+    """Convert VGI CPA format (1283.001) to cadastral format (1283/1)."""
+    s = str(cpa).strip()
+    if "." in s:
+        main, sub = s.split(".", 1)
+        sub = sub.lstrip("0")
+        return main if not sub else f"{main}/{sub}"
+    return s
+
+
     rows = ""
     for _, r in df.head(max_rows).iterrows():
         cells = ""
@@ -273,7 +282,9 @@ with tab_stats:
     fig.update_layout(showlegend=False, plot_bgcolor="white",
                       paper_bgcolor="white",
                       font=dict(family="Inter", size=14, color="#111827"),
-                      height=400, margin=dict(l=0, r=20, t=10, b=10))
+                      height=400, margin=dict(l=0, r=20, t=10, b=10),
+                      xaxis=dict(tickfont=dict(color="#111827")),
+                      yaxis=dict(tickfont=dict(color="#111827")))
     st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
@@ -286,6 +297,7 @@ with tab_stats:
                 .query("pocet_kultur > 1")
                 .sort_values("ha", ascending=False)
                 .head(50))
+    df_multi["cpa"] = df_multi["cpa"].apply(cpa_display)
     df_multi.columns = ["Parcela KN", "Počet kultúr", "Kultúry LPIS", "Výmera (ha)"]
     if not df_multi.empty:
         render_table(df_multi)
@@ -323,7 +335,9 @@ with tab_disk:
         fig_d.update_layout(plot_bgcolor="white", paper_bgcolor="white",
                             font=dict(family="Inter", size=14, color="#111827"),
                             height=max(220, len(plot_df)*52),
-                            margin=dict(l=0, r=30, t=10, b=10))
+                            margin=dict(l=0, r=30, t=10, b=10),
+                            xaxis=dict(tickfont=dict(color="#111827")),
+                            yaxis=dict(tickfont=dict(color="#111827")))
         st.plotly_chart(fig_d, use_container_width=True)
 
     st.divider()
@@ -332,6 +346,7 @@ with tab_disk:
         ~df_kn.apply(lambda r: (int(r["symbol"]), r["kultura_na"].lower()) in ZHODY, axis=1)
     ].copy()
     df_parc["KN druh pozemku"] = df_parc["symbol"].map(SYMBOL_MAP).fillna("Iné")
+    df_parc["cpa"] = df_parc["cpa"].apply(cpa_display)
     df_parc = (df_parc.rename(columns={"cpa": "Parcela KN",
                                         "kultura_na": "LPIS kultúra",
                                         "ha": "Výmera (ha)"})
@@ -352,7 +367,6 @@ with tab_bpej:
 
     df_ba = df_mf[
         df_mf["bpej"].notna() &
-        (df_mf["bpej"].astype(str).str.len() >= 3) &
         df_mf["lpis_nazov"].str.lower().str.contains("trvalý trávny porast", na=False) &
         (df_mf["vymera_gis"] > 500)
     ].copy()
@@ -360,6 +374,7 @@ with tab_bpej:
              .agg(vymera_gis=("vymera_gis", "max"))
              .reset_index())
     df_ba["Výmera (ha)"] = (df_ba["vymera_gis"] / 10000).round(2)
+    df_ba["bpej"] = df_ba["bpej"].astype(int).astype(str)
     df_ba = (df_ba.rename(columns={"parcela": "Parcela KN", "bpej": "Kód BPEJ"})
              [["Parcela KN", "Kód BPEJ", "Výmera (ha)"]]
              .sort_values("Výmera (ha)", ascending=False)
