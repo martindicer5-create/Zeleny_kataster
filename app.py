@@ -136,11 +136,11 @@ def load_kn_lpis():
 @st.cache_data
 def load_master_final():
     df = pd.read_csv("master_final.csv", header=None)
-    df.columns = ["id", "geom", "parcela_num", "fid2", "fid3",
-                  "parcela", "lpis_nazov", "vymera_gis", "bpej"]
+    df.columns = ["id", "geom", "parcela_num", "bpej", "fid3",
+                  "parcela", "lpis_nazov", "vymera_gis", "other"]
     df["vymera_gis"] = pd.to_numeric(df["vymera_gis"], errors="coerce")
     df["bpej"] = pd.to_numeric(df["bpej"], errors="coerce").astype("Int64")
-    return df[["parcela", "bpej", "vymera_gis", "lpis_nazov"]].dropna(subset=["bpej"])
+    return df[["parcela", "bpej", "vymera_gis", "lpis_nazov"]].query("bpej > 0")
 
 # ── Helper funkcie ─────────────────────────────────────────────────────────
 def cpa_display(cpa):
@@ -374,7 +374,7 @@ with tab_bpej:
              .agg(vymera_gis=("vymera_gis", "max"))
              .reset_index())
     df_ba["Výmera (ha)"] = (df_ba["vymera_gis"] / 10000).round(2)
-    df_ba["bpej"] = df_ba["bpej"].astype(int).astype(str)
+    df_ba["bpej"] = df_ba["bpej"].apply(lambda x: str(int(x)).zfill(7))
     df_ba = (df_ba.rename(columns={"parcela": "Parcela KN", "bpej": "Kód BPEJ"})
              [["Parcela KN", "Kód BPEJ", "Výmera (ha)"]]
              .sort_values("Výmera (ha)", ascending=False)
