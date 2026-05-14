@@ -131,6 +131,8 @@ def render_table(df, badge_col=None, badge_map=None, max_rows=200):
             if badge_col and col == badge_col and badge_map:
                 cls = badge_map.get(str(val).lower(), "badge-gray")
                 cells += f'<td><span class="badge {cls}">{val}</span></td>'
+            elif col in ["cpa", "Parcela KN", "CPA", "parcela", "Parcela"]:
+                cells += f'<td>{val}</td>'
             elif isinstance(val, float):
                 cells += f'<td>{val:,.4f}</td>' if val < 1 else f'<td>{val:,.2f}</td>'
             else:
@@ -341,6 +343,9 @@ with tab_bpej:
         df_mf["lpis_nazov"].str.lower().str.contains("trvalý trávny porast", na=False) &
         (df_mf["vymera_gis"] > 500)
     ].copy()
+    df_ba = (df_ba.groupby(["parcela", "bpej"])
+             .agg(vymera_gis=("vymera_gis", "max"))
+             .reset_index())
     df_ba["Výmera (ha)"] = (df_ba["vymera_gis"] / 10000).round(2)
     df_ba = (df_ba.rename(columns={"parcela": "Parcela KN", "bpej": "Kód BPEJ"})
              [["Parcela KN", "Kód BPEJ", "Výmera (ha)"]]
